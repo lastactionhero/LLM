@@ -2,9 +2,9 @@
 
 *A single LLM call cannot look things up, cannot check its own work, and forgets everything the moment it answers. These nine patterns are how you fix that - each one shown as a diagram, a few lines of LangGraph, and its real output.*
 
-Most "AI agent" tutorials either stay abstract or drop 400 lines of framework code on you. I wanted the middle: the smallest honest example of each pattern, with a picture of the control flow next to it.
+Agent patterns are usually presented either as high-level concepts or as large framework examples. This article takes the middle path: the smallest working example of each pattern, with a diagram of its control flow alongside it.
 
-Everything below comes from a notebook I ran end to end against a live model. The outputs are real, not illustrative.
+Every example below comes from a notebook run end to end against a live model, so the outputs shown are actual results.
 
 ## 1. Why patterns at all?
 

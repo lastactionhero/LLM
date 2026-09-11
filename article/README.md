@@ -2,7 +2,7 @@
 
 Generated from [`AgenticDesignPatterns.ipynb`](../AgenticDesignPatterns.ipynb).
 
-**Title:** Nine Agentic Design Patterns, Explained Visually
+**Title:** Agentic Design Patterns
 
 | File | Use |
 | --- | --- |

@@ -2,6 +2,8 @@
 
 Generated from [`AgenticDesignPatterns.ipynb`](../AgenticDesignPatterns.ipynb).
 
+**Title:** Nine Agentic Design Patterns, Explained Visually
+
 | File | Use |
 | --- | --- |
 | `linkedin-article.html` | Open in a browser, select all, copy, paste into the LinkedIn editor |
@@ -14,9 +16,30 @@ Generated from [`AgenticDesignPatterns.ipynb`](../AgenticDesignPatterns.ipynb).
 2. Select all (Ctrl+A), copy (Ctrl+C).
 3. In LinkedIn go to **Write article**, click into the body, paste.
    Headings, bold, bullets, numbered lists and quotes carry across. Images do not.
-4. Each image has a yellow `INSERT IMAGE: images/xx.png` marker above it.
-   At each marker use the editor's image button to upload that file, then delete the marker line.
-5. Paste the title separately into the title field.
+4. Paste the title separately into the title field.
+5. Add the images. They appear in this order, each directly under the paragraph
+   that introduces it:
+
+| # | File | Goes after |
+| --- | --- | --- |
+| 1 | `01-why-agents.png` | "...keep working until the goal is met." |
+| 2 | `02-four-pillars.png` | "...properties that separate an agent..." |
+| 3 | `04-prompt-chaining.png` | 3.1 Prompt Chaining |
+| 4 | `05-routing.png` | 3.2 Routing |
+| 5 | `06-parallelization.png` | 3.3 Parallelization |
+| 6 | `07-reflection.png` | 3.4 Reflection |
+| 7 | `08-tool-use.png` | 3.5 Tool Use |
+| 8 | `09-planning.png` | 3.6 Planning |
+| 9 | `10-multi-agent-supervisor.png` | 3.7 Multi-Agent Collaboration |
+| 10 | `11-group-chat-debate.png` | Variant: Group Chat / Debate |
+| 11 | `12-memory.png` | 3.8 Memory |
+| 12 | `13-human-in-the-loop.png` | 3.9 Human-in-the-Loop |
+| 13 | `14-picking-a-pattern.png` | 4. How to pick one |
+
+Keeping the browser preview open side by side makes this quick, since the HTML
+shows each diagram exactly where it belongs.
+
+`03-setup.png` is not used in the article. It is kept for the notebook.
 
 ## Notes
 

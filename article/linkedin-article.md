@@ -1,4 +1,4 @@
-# Nine Agentic Design Patterns, Explained with Diagrams and Runnable Code
+# Nine Agentic Design Patterns, Explained Visually
 
 *A single LLM call cannot look things up, cannot check its own work, and forgets everything the moment it answers. These nine patterns are how you fix that - each one shown as a diagram, a few lines of LangGraph, and its real output.*
 

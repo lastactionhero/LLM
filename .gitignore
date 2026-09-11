@@ -1,6 +1,4 @@
-.vs/slnx.sqlite
-.vs/VSWorkspaceState.json
-.vs/LLM from scratch.slnx/FileContentIndex/095d1ec8-716b-4ac1-842a-e99b4382b0fe.vsidx
-.vs/LLM from scratch.slnx/v18/.wsuo
-.vs/LLM from scratch.slnx/v18/DocumentLayout.json
+.env
 .venv/*
+.venv-1/*
+.vs/

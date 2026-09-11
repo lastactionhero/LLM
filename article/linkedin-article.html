@@ -1,0 +1,210 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Nine Agentic Design Patterns, Explained with Diagrams and Runnable Code</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:780px;margin:40px auto;padding:0 24px;
+       line-height:1.65;color:#1a1a1a;font-size:18px}
+ h1{font-size:34px;line-height:1.25;margin:0 0 16px}
+ h2{font-size:26px;margin:40px 0 12px;line-height:1.3}
+ h3{font-size:21px;margin:32px 0 10px}
+ .sub{font-size:20px;color:#444;font-style:italic;margin-bottom:32px}
+ img{max-width:100%;height:auto;display:block;margin:18px 0}
+ pre{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:14px 16px;
+      overflow-x:auto;font-family:Consolas,Monaco,monospace;font-size:14px;line-height:1.5;color:#111}
+ blockquote{border-left:4px solid #4F46E5;margin:20px 0;padding:6px 18px;color:#333;font-style:italic}
+ .marker{background:#FEF3C7;border:1px dashed #D97706;color:#92400E;padding:7px 11px;
+          font-family:Consolas,monospace;font-size:13px;font-style:normal;margin:18px 0 4px}
+ li{margin:7px 0}
+</style></head><body>
+<h1>Nine Agentic Design Patterns, Explained with Diagrams and Runnable Code</h1>
+<div class="sub">A single LLM call cannot look things up, cannot check its own work, and forgets everything the moment it answers. These nine patterns are how you fix that - each one shown as a diagram, a few lines of LangGraph, and its real output.</div>
+<p>Most &quot;AI agent&quot; tutorials either stay abstract or drop 400 lines of framework code on you. I wanted the middle: the smallest honest example of each pattern, with a picture of the control flow next to it.</p>
+<p>Everything below comes from a notebook I ran end to end against a live model. The outputs are real, not illustrative.</p>
+<h2>1. Why patterns at all?</h2>
+<p>A plain LLM call is a one-shot function: prompt in, text out. An agent wraps that same model in a loop with tools, memory, and a goal, so it can keep working until the goal is met.</p>
+<div class="marker">INSERT IMAGE: images/01-why-agents.png &nbsp;(delete this line after uploading)</div>
+<img src="images/01-why-agents.png" alt="01-why-agents">
+<p>That is the whole idea. Everything else is a variation on where the loop goes and who gets to decide the next step.</p>
+<p>Here is the honest version of why each pattern exists - every one removes a specific failure:</p>
+<ul><li>Task is too big for one prompt - Prompt Chaining, Planning</li><li>Answer is confidently wrong - Reflection</li><li>Model has no live or private data - Tool Use</li><li>Every request handled the same way - Routing</li><li>Independent work runs slowly - Parallelization</li><li>Forgets the previous turn - Memory</li><li>One prompt juggling too many skills - Multi-Agent Collaboration</li><li>Two plausible answers and no way to choose - Group Chat / Debate</li><li>Risky or irreversible actions - Human-in-the-Loop</li></ul>
+<blockquote>Patterns are not frameworks. They are repeatable shapes of control flow. In LangGraph each one is a small arrangement of nodes (steps) and edges (what runs next).</blockquote>
+<h2>2. The four pillars</h2>
+<p>Before the patterns, the properties that separate an agent from an ordinary program:</p>
+<div class="marker">INSERT IMAGE: images/02-four-pillars.png &nbsp;(delete this line after uploading)</div>
+<img src="images/02-four-pillars.png" alt="02-four-pillars">
+<ul><li>Goal-Directed - a plain program runs fixed steps; an agent keeps working until the objective is met.</li><li>Reactive - a plain program ignores the world; an agent reads tool results, errors, and replies.</li><li>Stateful - a plain program forgets each call; an agent remembers the conversation and what it already tried.</li><li>Autonomous - a plain program waits to be told; an agent decides the next action itself.</li></ul>
+<p>A useful one-line test: if you can replace it with an if/else and a template, it is not an agent.</p>
+<h2>3. The nine patterns</h2>
+<p>Each example reuses one chat model and one helper so the pattern stays visible:</p>
+<pre>def ask(prompt: str) -&gt; str:
+    &quot;&quot;&quot;Send one prompt, get plain text back.&quot;&quot;&quot;
+    return str(llm.invoke(prompt).content).strip()</pre>
+<h3>3.1 Prompt Chaining</h3>
+<p>Break one big task into small steps, and feed each step&#x27;s output into the next.</p>
+<div class="marker">INSERT IMAGE: images/04-prompt-chaining.png &nbsp;(delete this line after uploading)</div>
+<img src="images/04-prompt-chaining.png" alt="04-prompt-chaining">
+<p>One node per step, joined by plain edges. No branching, no loop.</p>
+<pre>chain = (
+    StateGraph(ChainState)
+    .add_node(&quot;extract&quot;, extract)
+    .add_node(&quot;summarize&quot;, summarize)
+    .add_node(&quot;make_ticket&quot;, make_ticket)
+    .add_edge(START, &quot;extract&quot;)
+    .add_edge(&quot;extract&quot;, &quot;summarize&quot;)
+    .add_edge(&quot;summarize&quot;, &quot;make_ticket&quot;)
+    .add_edge(&quot;make_ticket&quot;, END)
+    .compile()
+)</pre>
+<p>Feeding it a rambling support email produces a clean ticket:</p>
+<pre>issue   : Customer was double-charged for order #4471 last Friday and is
+          requesting a refund after receiving no response to two emails.
+summary : Customer seeks duplicate-charge refund for order #4471 after no response.
+ticket  : Duplicate-charge refund request for order #4471 | high</pre>
+<h3>3.2 Routing</h3>
+<p>Classify the request first, then send it down the branch built for it.</p>
+<div class="marker">INSERT IMAGE: images/05-routing.png &nbsp;(delete this line after uploading)</div>
+<img src="images/05-routing.png" alt="05-routing">
+<p>A conditional edge picks the next node from a value the classifier wrote into state:</p>
+<pre>.add_conditional_edges(
+    &quot;classify&quot;,
+    lambda s: s[&quot;route&quot;],
+    [&quot;billing&quot;, &quot;technical&quot;, &quot;other&quot;],
+)</pre>
+<pre>I was charged twice this month.
+  router -&gt; billing
+
+The app crashes when I upload a photo.
+  router -&gt; technical
+
+How are you doing today.
+  router -&gt; other</pre>
+<p>The billing question never touches the tech-support branch. That is the saving: fewer tools in context, a tighter prompt, and a cheaper call.</p>
+<h3>3.3 Parallelization</h3>
+<p>Run independent sub-tasks at the same time, then merge the results.</p>
+<div class="marker">INSERT IMAGE: images/06-parallelization.png &nbsp;(delete this line after uploading)</div>
+<img src="images/06-parallelization.png" alt="06-parallelization">
+<p>Two edges leaving START create branches that run together. The node they both feed into waits for both:</p>
+<pre>.add_edge(START, &quot;pro&quot;)
+.add_edge(START, &quot;con&quot;)
+.add_edge(&quot;pro&quot;, &quot;verdict&quot;)
+.add_edge(&quot;con&quot;, &quot;verdict&quot;)</pre>
+<p>The timestamps are the proof - both branches start at the same moment:</p>
+<pre>pro     ran from t+0.0s to t+3.3s
+con     ran from t+0.0s to t+3.8s
+verdict ran after the join, total t+5.5s</pre>
+<p>Sequentially that is roughly 7 seconds of model time. Here it is 5.5 including the join.</p>
+<h3>3.4 Reflection</h3>
+<p>The agent reviews its own draft against the goal and revises until it is good enough.</p>
+<div class="marker">INSERT IMAGE: images/07-reflection.png &nbsp;(delete this line after uploading)</div>
+<img src="images/07-reflection.png" alt="07-reflection">
+<p>A generate node and a critique node, with a conditional edge looping back - plus a round cap, because a self-grading loop with no ceiling is how you get a runaway bill:</p>
+<pre>def keep_going(state: DraftState) -&gt; str:
+    if state[&quot;feedback&quot;].upper().startswith(&quot;APPROVED&quot;):
+        return END
+    if state[&quot;round&quot;] &gt;= MAX_ROUNDS:
+        return END
+    return &quot;generate&quot;</pre>
+<p>Asking for a tagline under 8 words that mentions reuse:</p>
+<pre>round 1 draft    : Refill Your Day.
+round 1 critique : Add reuse mention.
+round 2 draft    : Refill. Reuse. Repeat.
+round 2 critique : APPROVED</pre>
+<p>The critic caught a real miss, and round 2 fixed it.</p>
+<h3>3.5 Tool Use</h3>
+<p>Give the model typed functions so it can fetch real data instead of guessing.</p>
+<div class="marker">INSERT IMAGE: images/08-tool-use.png &nbsp;(delete this line after uploading)</div>
+<img src="images/08-tool-use.png" alt="08-tool-use">
+<pre>@tool
+def get_weather(city: str) -&gt; str:
+    &quot;&quot;&quot;Get today&#x27;s weather for a city.&quot;&quot;&quot;
+    return f&quot;{city}: sunny, {randint(15, 30)}C&quot;
+
+agent = create_agent(model=llm, tools=[get_weather])</pre>
+<p>The interesting part is not that the tool fires - it is that the model knows when not to call it:</p>
+<pre>[tool called] get_weather(&#x27;Paris&#x27;)
+answer: Paris is sunny and 15C today.
+
+answer: 2 + 2 = 4.          &lt;- no tool call</pre>
+<h3>3.6 Planning</h3>
+<p>Turn a vague goal into an explicit list of steps, then execute them one at a time.</p>
+<div class="marker">INSERT IMAGE: images/09-planning.png &nbsp;(delete this line after uploading)</div>
+<img src="images/09-planning.png" alt="09-planning">
+<p>A planner writes the steps into state; an executor loops until the list is exhausted:</p>
+<pre>def more_steps(state: PlanState) -&gt; str:
+    return &quot;executor&quot; if len(state[&quot;done&quot;]) &lt; len(state[&quot;steps&quot;]) else END</pre>
+<pre>plan:
+  1. Arrive early at Baga Beach
+  2. Explore Fort Aguada by noon
+  3. Enjoy sunset and seafood dinner
+
+step 1 -&gt; Reach Baga Beach by 7:00 AM for the quiet shoreline and easier parking.
+step 2 -&gt; Reach Fort Aguada by 10:00 AM; about 90 minutes for lighthouse and ramparts.
+step 3 -&gt; Head to Cavelossim for a sunset seafood dinner.</pre>
+<p>The plan is visible and auditable before any of it runs - which is exactly what you want when the steps have side effects.</p>
+<h3>3.7 Multi-Agent Collaboration</h3>
+<p>Split the work across specialists and let a supervisor decide who acts next.</p>
+<div class="marker">INSERT IMAGE: images/10-multi-agent-supervisor.png &nbsp;(delete this line after uploading)</div>
+<img src="images/10-multi-agent-supervisor.png" alt="10-multi-agent-supervisor">
+<p>Each agent is a node; the supervisor routes with a conditional edge and shared state carries the work product:</p>
+<pre>supervisor -&gt; researcher
+researcher : - The Great Rift Valley is a huge geological trench...
+supervisor -&gt; writer
+writer     : The Great Rift Valley is a massive geological trench that...
+supervisor -&gt; reviewer
+reviewer   : OK
+supervisor -&gt; done</pre>
+<p>One practical note: I kept a deterministic guard next to the supervisor so the graph stops once every worker has contributed, whatever the model says. Never let an LLM be the only thing standing between you and an infinite loop.</p>
+<h3>Variant: Group Chat / Debate</h3>
+<p>Same cast of agents, different topology. Instead of a supervisor handing out different sub-tasks, the agents argue the same question in one shared transcript and a judge decides.</p>
+<div class="marker">INSERT IMAGE: images/11-group-chat-debate.png &nbsp;(delete this line after uploading)</div>
+<img src="images/11-group-chat-debate.png" alt="11-group-chat-debate">
+<p>The distinction is worth being precise about:</p>
+<ul><li>Reflection - one agent, talking to itself, improving its own draft.</li><li>Multi-Agent Collaboration - specialists, working on different parts of the task.</li><li>Group Chat / Debate - peers who disagree, working the same question to expose weak reasoning.</li></ul>
+<p>Asking whether a 100-user hobby app should use Postgres or DynamoDB:</p>
+<pre>-- round 1 --
+Agent A (Postgres): simpler to build with, cheaper to reason about...
+Agent B (DynamoDB): zero-ops reliability and effortless scaling...
+
+-- round 2 --
+Agent A: at 100 users, effortless scaling solves a problem you don&#x27;t have.
+Agent B: avoiding small operational burdens matters more than query flexibility.
+
+judge: Postgres - for a 100-user hobby app, ease of modeling and iteration
+       matters more than DynamoDB&#x27;s premature scaling benefits.</pre>
+<p>Round 2 is where this earns its cost. Both agents stopped pitching and started rebutting, and the judge&#x27;s reasoning names the tradeoff it accepted rather than just picking a winner.</p>
+<h3>3.8 Memory</h3>
+<p>Preserve conversation context across turns while keeping each thread isolated.</p>
+<div class="marker">INSERT IMAGE: images/12-memory.png &nbsp;(delete this line after uploading)</div>
+<img src="images/12-memory.png" alt="12-memory">
+<p>A checkpointer plus a thread_id turns a stateless agent into a remembering one:</p>
+<pre>agent = create_agent(model=llm, tools=[], checkpointer=InMemorySaver())
+
+alice = {&quot;configurable&quot;: {&quot;thread_id&quot;: &quot;alice&quot;}}
+bob   = {&quot;configurable&quot;: {&quot;thread_id&quot;: &quot;bob&quot;}}</pre>
+<p>Alice mentions she is vegetarian once, several turns earlier. Bob never did:</p>
+<pre>alice (remembers): How about a chickpea and spinach curry with basmati rice?
+bob   (no memory): Try baked salmon with roasted asparagus and quinoa.</pre>
+<p>Same agent, same question, different thread. Isolation is the feature, not a side effect.</p>
+<h3>3.9 Human-in-the-Loop</h3>
+<p>Pause before risky or irreversible actions and wait for a human decision.</p>
+<div class="marker">INSERT IMAGE: images/13-human-in-the-loop.png &nbsp;(delete this line after uploading)</div>
+<img src="images/13-human-in-the-loop.png" alt="13-human-in-the-loop">
+<p>interrupt() suspends the run mid-graph; Command(resume=...) continues it from the checkpoint:</p>
+<pre>def ask_human(state: RefundState) -&gt; dict:
+    decision = interrupt(
+        f&quot;Approve a refund of ${state[&#x27;amount&#x27;]}? (approve / reject)&quot;
+    )
+    return {&quot;status&quot;: decision}</pre>
+<p>The graph genuinely stops. Nothing is sent until a human answers - and because the state is checkpointed, the pause can outlive the process.</p>
+<h2>4. How to pick one</h2>
+<div class="marker">INSERT IMAGE: images/14-picking-a-pattern.png &nbsp;(delete this line after uploading)</div>
+<img src="images/14-picking-a-pattern.png" alt="14-picking-a-pattern">
+<p>Four rules of thumb that have held up for me:</p>
+<ol><li>Start with the simplest thing that works: a single prompt, then Tool Use, then a loop.</li><li>Add a pattern only when you can name the failure it removes.</li><li>Patterns compose. A real agent is usually Routing plus Tool Use plus Memory, with Reflection on the parts that must be correct.</li><li>Every loop needs a stop condition: a round cap, a budget, or a human.</li></ol>
+<h2>A note on what the frameworks now give you</h2>
+<p>I hand-rolled these to make the control flow visible, but it is worth knowing that LangChain&#x27;s create_agent now ships middleware covering several of them directly - HumanInTheLoopMiddleware, TodoListMiddleware for planning, SummarizationMiddleware for context, and ModelCallLimitMiddleware for the loop caps I wrote by hand.</p>
+<p>Understanding the shape first still pays off. Middleware is much easier to reason about once you know which pattern it is implementing, and there is no supervisor or debate abstraction in the box - those you still assemble yourself.</p>
+<h2>The code</h2>
+<p>The full notebook - all nine patterns, every diagram, and the setup cell - is here:</p>
+<p><a href="https://github.com/lastactionhero/LLM/blob/main/AgenticDesignPatterns.ipynb">https://github.com/lastactionhero/LLM/blob/main/AgenticDesignPatterns.ipynb</a></p>
+<p>It needs three environment variables in a local .env file and nothing else. Every cell runs standalone after the setup cell, so you can jump straight to the pattern you care about.</p>
+<p>If you build something with these, or you think I have a pattern wrong, I would genuinely like to hear it.</p>
+</body></html>

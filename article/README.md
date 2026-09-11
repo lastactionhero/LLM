@@ -8,6 +8,8 @@ Generated from [`AgenticDesignPatterns.ipynb`](../AgenticDesignPatterns.ipynb).
 | --- | --- |
 | `linkedin-article.html` | Open in a browser, select all, copy, paste into the LinkedIn editor |
 | `linkedin-article.md` | Markdown source, for Medium / Dev.to / a GitHub README |
+| `images/00-cover-1920x1080.png` | Article cover image |
+| `images/00-share-1200x627.png` | Image for the accompanying feed post |
 | `images/*.png` | The 13 diagrams, 1448 px wide, upload these into the article |
 
 ## Publishing to LinkedIn
@@ -47,8 +49,18 @@ shows each diagram exactly where it belongs.
   bullet list here.
 - LinkedIn has no syntax highlighting. Code appears as monospaced blocks, which is
   why the snippets are kept to a few lines each.
-- Suggested cover image: `images/02-four-pillars.png`.
+- Suggested cover image: `images/00-cover-1920x1080.png` (1920x1080, LinkedIn's
+  recommended article cover ratio). Use `images/00-share-1200x627.png` on the
+  feed post that announces the article.
 - Reading time is roughly 7 minutes at about 1,600 words.
+
+## Hashtags
+
+LinkedIn articles have no separate tag field. Add hashtags at the end of the
+article body, and on the feed post that shares it. Three to five is the sweet
+spot:
+
+`#AIAgents` `#LangGraph` `#LLM` `#SoftwareArchitecture` `#GenerativeAI`
 
 ## Regenerating
 

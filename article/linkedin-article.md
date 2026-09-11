@@ -330,4 +330,4 @@ https://github.com/lastactionhero/LLM/blob/main/AgenticDesignPatterns.ipynb
 
 It needs three environment variables in a local .env file and nothing else. Every cell runs standalone after the setup cell, so you can jump straight to the pattern you care about.
 
-If you build something with these, or you think I have a pattern wrong, I would genuinely like to hear it.
+These nine are a starting set, not a closed list. Which patterns have you found useful, and what would you add?
